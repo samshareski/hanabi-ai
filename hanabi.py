@@ -11,6 +11,30 @@ class Colour(Enum):
     red = 5
 
 
+class PlayArea:
+    def __init__(self):
+        self.played = {Colour.white: [],
+                       Colour.yellow: [],
+                       Colour.green: [],
+                       Colour.blue: [],
+                       Colour.red: []}
+
+    def play(self, card):
+        suit = self.played[card.colour]
+        if not suit:
+            if card.number == 1:
+                suit.append(card)
+                return True
+            else:
+                return False
+        else:
+            if suit[-1].number == card.number - 1:
+                suit.append(card)
+                return True
+            else:
+                return False
+
+
 class Card:
     def __init__(self, colour, number):
         self.colour = colour
@@ -83,6 +107,12 @@ class Deck:
 
 if __name__ == '__main__':
     deck = Deck()
+    play_area = PlayArea()
 
     while not deck.is_empty():
-        print(deck.draw())
+        card = deck.draw()
+        print(card)
+        if play_area.play(card):
+            print('Card played!')
+        else:
+            print('Card not played!')
