@@ -13,8 +13,11 @@ class Hanabi:
         self.end_trigger = False
         self.turns_after_trigger = 2
         self.blown_up = False
-        self.player1 = Player()
-        self.player2 = Player()
+        starting_cards = []
+        for _ in range(10):
+            starting_cards.append(self.deck.draw())
+        self.player1 = Player(starting_cards[:5], self)
+        self.player2 = Player(starting_cards[5:], self)
         self.player1.partner = self.player2
         self.player2.partner = self.player1
 
@@ -39,7 +42,7 @@ class Hanabi:
 
     def give_info(self, giver, info):
         recipient = giver.partner
-        recipient.recieve_info(info)
+        recipient.receive_info(info)
         if self.end_trigger:
             self.turns_after_trigger -= 1
 
@@ -52,23 +55,65 @@ class Hanabi:
 
 
 class Player:
-    def __init__(self):
-        pass
+    def __init__(self, starting_hand, game):
+        self.game = game
+        self.timestamp = 0
+        self.hand = []
+        for card in starting_hand:
+            self._add_to_hand(card)
+
+    def _add_to_hand(self, card):
+        self.hand.append(CardInHand(card, self.timestamp))
 
     def perform_turn(self):
         pass
 
     def play(self, position):
-        pass
+        card = self.hand.pop(position)
+        drawn_card = self.game.play(card)
+        if drawn_card:
+            self._add_to_hand(drawn_card)
 
     def discard(self, position):
-        pass
+        card = self.hand.pop(position)
+        drawn_card = self.game.discard(card)
+        if drawn_card:
+            self._add_to_hand(drawn_card)
 
     def give_info(self, info):
-        pass
+        self.game.give_info(self, info)
 
-    def recieve_info(self, info):
-        pass
+    def receive_info(self, info):
+        if isinstance(info, Colour):
+            for card_in_hand in self.hand:
+                card_in_hand.learn_colour(info)
+        else:
+            for card_in_hand in self.hand:
+                card_in_hand.learn_number(info)
+
+
+class CardInHand:
+    def __init__(self, card, timestamp):
+        self.card = card
+        self.possible_colours = list(Colour)
+        self.possible_numbers = [1, 2, 3, 4, 5]
+        self.colour = None
+        self.number = None
+        self.timestamp = timestamp
+
+    def learn_colour(self, colour):
+        if self.card.colour == colour:
+            self.possible_colours = [colour]
+            self.colour = colour
+        elif colour in self.possible_colours:
+            self.possible_colours.remove(colour)
+
+    def learn_number(self, number):
+        if self.card.number == number:
+            self.possible_numbers = [number]
+            self.number = number
+        elif number in self.possible_numbers:
+            self.possible_numbers.remove(number)
 
 
 class Colour(Enum):
