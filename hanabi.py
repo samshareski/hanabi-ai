@@ -11,6 +11,15 @@ class Colour(Enum):
     red = 5
 
 
+class Card:
+    def __init__(self, colour, number):
+        self.colour = colour
+        self.number = number
+
+    def __str__(self):
+        return '{} {}'.format(self.colour.name, self.number)
+
+
 class PlayArea:
     def __init__(self):
         self.played = {Colour.white: [],
@@ -33,15 +42,6 @@ class PlayArea:
                 return True
             else:
                 return False
-
-
-class Card:
-    def __init__(self, colour, number):
-        self.colour = colour
-        self.number = number
-
-    def __str__(self):
-        return '{} {}'.format(self.colour.name, self.number)
 
 
 class Deck:
