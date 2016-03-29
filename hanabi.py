@@ -3,6 +3,74 @@ from enum import Enum
 from numpy import random
 
 
+class Hanabi:
+    def __init__(self):
+        self.deck = Deck()
+        self.play_area = PlayArea()
+        self.discard = []
+        self.time = 8
+        self.fuse = 3
+        self.end_trigger = False
+        self.turns_after_trigger = 2
+        self.blown_up = False
+        self.player1 = Player()
+        self.player2 = Player()
+        self.player1.partner = self.player2
+        self.player2.partner = self.player1
+
+    def play(self, card):
+        if not self.play_area.play(card):
+            self.fuse -= 1
+            if self.fuse == 0:
+                self.blown_up = True
+        if self.end_trigger:
+            self.turns_after_trigger -= 1
+            return
+        else:
+            return self.deck.draw()
+
+    def discard(self, card):
+        self.discard.append(card)
+        if self.end_trigger:
+            self.turns_after_trigger -= 1
+            return
+        else:
+            return self.deck.draw()
+
+    def give_info(self, giver, info):
+        recipient = giver.partner
+        recipient.recieve_info(info)
+        if self.end_trigger:
+            self.turns_after_trigger -= 1
+
+    def play_game(self):
+        current_player = self.player1
+        while not self.blown_up and self.turns_after_trigger > 0:
+            current_player.perform_turn()
+            current_player = current_player.partner
+        return self.play_area.get_score(), self.blown_up
+
+
+class Player:
+    def __init__(self):
+        pass
+
+    def perform_turn(self):
+        pass
+
+    def play(self, position):
+        pass
+
+    def discard(self, position):
+        pass
+
+    def give_info(self, info):
+        pass
+
+    def recieve_info(self, info):
+        pass
+
+
 class Colour(Enum):
     white = 1
     yellow = 2
@@ -42,6 +110,13 @@ class PlayArea:
                 return True
             else:
                 return False
+
+    def get_score(self):
+        score = 0
+        for suit in self.played.values():
+            if suit:
+                score += suit[-1].number
+        return score
 
 
 class Deck:
@@ -95,7 +170,7 @@ class Deck:
                            Card(Colour.red, 3),
                            Card(Colour.red, 4),
                            Card(Colour.red, 4),
-                           Card(Colour.red, 6)))
+                           Card(Colour.red, 5)))
         random.shuffle(self.deck)
 
     def is_empty(self):
