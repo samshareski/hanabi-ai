@@ -4,7 +4,7 @@ from numpy import random
 
 
 class Hanabi:
-    def __init__(self):
+    def __init__(self, player_class):
         self.deck = Deck()
         self.play_area = PlayArea()
         self.discard = []
@@ -16,8 +16,8 @@ class Hanabi:
         starting_cards = []
         for _ in range(10):
             starting_cards.append(self.deck.draw())
-        self.player1 = Player(starting_cards[:5], self)
-        self.player2 = Player(starting_cards[5:], self)
+        self.player1 = player_class(starting_cards[:5], self)
+        self.player2 = player_class(starting_cards[5:], self)
         self.player1.partner = self.player2
         self.player2.partner = self.player1
 
@@ -34,6 +34,7 @@ class Hanabi:
 
     def discard(self, card):
         self.discard.append(card)
+        self.time += 1
         if self.end_trigger:
             self.turns_after_trigger -= 1
             return
@@ -43,6 +44,7 @@ class Hanabi:
     def give_info(self, giver, info):
         recipient = giver.partner
         recipient.receive_info(info)
+        self.time -= 1
         if self.end_trigger:
             self.turns_after_trigger -= 1
 
@@ -66,7 +68,7 @@ class Player:
         self.hand.append(CardInHand(card, self.timestamp))
 
     def perform_turn(self):
-        pass
+        raise NotImplementedError
 
     def play(self, position):
         card = self.hand.pop(position)
