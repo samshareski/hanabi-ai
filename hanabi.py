@@ -57,10 +57,12 @@ class Hanabi:
 
 
 class Player:
-    def __init__(self, starting_hand, game):
+    def __init__(self, starting_hand, game, heuristic):
         self.game = game
         self.timestamp = 0
         self.hand = []
+        self.heuristic = heuristic(self)
+        self.partner = None
         for card in starting_hand:
             self._add_to_hand(card)
 
@@ -68,7 +70,8 @@ class Player:
         self.hand.append(CardInHand(card, self.timestamp))
 
     def perform_turn(self):
-        raise NotImplementedError
+        move, arg = self.heuristic.best_move()
+        move(arg)
 
     def play(self, position):
         card = self.hand.pop(position)
@@ -92,6 +95,62 @@ class Player:
         else:
             for card_in_hand in self.hand:
                 card_in_hand.learn_number(info)
+
+
+class Heuristic:
+    def __init__(self, player):
+        self.player = player
+        self.play_moves = [
+            Move(player.play, 0),
+            Move(player.play, 1),
+            Move(player.play, 2),
+            Move(player.play, 3),
+            Move(player.play, 4)
+        ]
+        self.discard_moves = [
+            Move(player.discard, 0),
+            Move(player.discard, 1),
+            Move(player.discard, 2),
+            Move(player.discard, 3),
+            Move(player.discard, 4),
+        ]
+        self.give_colour_moves = [
+            Move(player.give_info, Colour.white),
+            Move(player.give_info, Colour.yellow),
+            Move(player.give_info, Colour.green),
+            Move(player.give_info, Colour.blue),
+            Move(player.give_info, Colour.red)
+        ]
+        self.give_number_moves = [
+            Move(player.give_info, 1),
+            Move(player.give_info, 2),
+            Move(player.give_info, 3),
+            Move(player.give_info, 4),
+            Move(player.give_info, 5)
+        ]
+
+    def best_move(self):
+        raise NotImplementedError
+
+
+class SimpleHeuristic(Heuristic):
+    def __init__(self, player):
+        super(SimpleHeuristic, self).__init__(player)
+
+    def best_move(self):
+        partner_hand = self.player.partner.hand
+        playable_cards = self.player.game.play_area.playable_cards()
+        for card_in_hand in partner_hand:
+            if card_in_hand.colour
+
+
+
+
+class Move:
+    def __init__(self, move, arg):
+        self.move = move
+        self.arg = arg
+        self.value = 0
 
 
 class CardInHand:
@@ -134,6 +193,9 @@ class Card:
     def __str__(self):
         return '{} {}'.format(self.colour.name, self.number)
 
+    def __eq__(self, other):
+        return self.colour == other.colour and self.number == other.number
+
 
 class PlayArea:
     def __init__(self):
@@ -165,6 +227,21 @@ class PlayArea:
                 score += suit[-1].number
         return score
 
+    def playable_cards(self):
+        playable = []
+        for colour, values in self.played.items():
+            if not values:
+                playable.append(Card(colour, 1))
+            elif values[-1] != 5:
+                playable.append(Card(colour. values[-1] + 1))
+        return playable
+
+    def discardable_cards(self):
+        discardable = []
+        for colour, values in self.played.items():
+            for value in values:
+                discardable.append(Card(colour, value))
+        return discardable
 
 class Deck:
     def __init__(self):
