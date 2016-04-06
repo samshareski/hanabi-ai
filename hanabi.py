@@ -4,10 +4,10 @@ from numpy import random
 
 
 class Hanabi:
-    def __init__(self, player_class):
+    def __init__(self, heuristic):
         self.deck = Deck()
         self.play_area = PlayArea()
-        self.discard = []
+        self.discard_pile = []
         self.time = 8
         self.fuse = 3
         self.end_trigger = False
@@ -16,8 +16,8 @@ class Hanabi:
         starting_cards = []
         for _ in range(10):
             starting_cards.append(self.deck.draw())
-        self.player1 = player_class(starting_cards[:5], self)
-        self.player2 = player_class(starting_cards[5:], self)
+        self.player1 = Player(starting_cards[:5], self, heuristic)
+        self.player2 = Player(starting_cards[5:], self, heuristic)
         self.player1.partner = self.player2
         self.player2.partner = self.player1
 
@@ -30,16 +30,22 @@ class Hanabi:
             self.turns_after_trigger -= 1
             return
         else:
-            return self.deck.draw()
+            return self.draw()
 
     def discard(self, card):
-        self.discard.append(card)
+        self.discard_pile.append(card)
         self.time += 1
         if self.end_trigger:
             self.turns_after_trigger -= 1
             return
         else:
-            return self.deck.draw()
+            return self.draw()
+
+    def draw(self):
+        card = self.deck.draw()
+        if self.deck.is_empty():
+            self.end_trigger = True
+        return card
 
     def give_info(self, giver, info):
         recipient = giver.partner
@@ -67,21 +73,22 @@ class Player:
             self._add_to_hand(card)
 
     def _add_to_hand(self, card):
+        self.timestamp += 1
         self.hand.append(CardInHand(card, self.timestamp))
 
     def perform_turn(self):
-        move, arg = self.heuristic.best_move()
-        move(arg)
+        move = self.heuristic.best_move()
+        move.make_move()
 
     def play(self, position):
-        card = self.hand.pop(position)
-        drawn_card = self.game.play(card)
+        card_in_hand = self.hand.pop(position)
+        drawn_card = self.game.play(card_in_hand.card)
         if drawn_card:
             self._add_to_hand(drawn_card)
 
     def discard(self, position):
-        card = self.hand.pop(position)
-        drawn_card = self.game.discard(card)
+        card_in_hand = self.hand.pop(position)
+        drawn_card = self.game.discard(card_in_hand.card)
         if drawn_card:
             self._add_to_hand(drawn_card)
 
@@ -138,19 +145,54 @@ class SimpleHeuristic(Heuristic):
         super(SimpleHeuristic, self).__init__(player)
 
     def best_move(self):
-        partner_hand = self.player.partner.hand
+        best_move = None
+        player_hand = self.player.hand
+        oldest = 50
+        for i, card_in_hand in enumerate(player_hand):
+            if card_in_hand.timestamp < oldest:
+                oldest = card_in_hand.timestamp
+                best_move = Move(self.player.discard, i)
+
         playable_cards = self.player.game.play_area.playable_cards()
-        for card_in_hand in partner_hand:
-            if card_in_hand.colour
+        if self.player.game.time > 0:
+            playable_info = {Colour.white : 0,
+                             Colour.yellow : 0,
+                             Colour.green : 0,
+                             Colour.blue : 0,
+                             Colour.red : 1,
+                             1 : 0,
+                             2 : 0,
+                             3 : 0,
+                             4 : 0,
+                             5 : 0}
+            partner_hand = self.player.partner.hand
+            for card_in_hand in partner_hand:
+                if card_in_hand.card in playable_cards:
+                    if not card_in_hand.colour:
+                        playable_info[card_in_hand.card.colour] += 1
+                    if not card_in_hand.number:
+                        playable_info[card_in_hand.card.number] += 1
 
+            best_value = 0
+            for info, value in playable_info.items():
+                if value > best_value:
+                    best_value = value
+                    best_move = Move(self.player.give_info, info)
 
+        for i, card_in_hand in enumerate(self.player.hand):
+            if card_in_hand.colour and card_in_hand.number and card_in_hand.card in playable_cards:
+                best_move = Move(self.player.play, i)
+
+        return best_move
 
 
 class Move:
     def __init__(self, move, arg):
         self.move = move
         self.arg = arg
-        self.value = 0
+
+    def make_move(self):
+        self.move(self.arg)
 
 
 class CardInHand:
@@ -232,8 +274,8 @@ class PlayArea:
         for colour, values in self.played.items():
             if not values:
                 playable.append(Card(colour, 1))
-            elif values[-1] != 5:
-                playable.append(Card(colour. values[-1] + 1))
+            elif values[-1].number != 5:
+                playable.append(Card(colour, values[-1].number + 1))
         return playable
 
     def discardable_cards(self):
@@ -305,13 +347,12 @@ class Deck:
 
 
 if __name__ == '__main__':
-    deck = Deck()
-    play_area = PlayArea()
+    total = 0
+    n_games = 10000
+    for _ in range(n_games):
+        game = Hanabi(SimpleHeuristic)
+        score, fail = game.play_game()
+        total += score
+    print(total / n_games)
 
-    while not deck.is_empty():
-        card = deck.draw()
-        print(card)
-        if play_area.play(card):
-            print('Card played!')
-        else:
-            print('Card not played!')
+
