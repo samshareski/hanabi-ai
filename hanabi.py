@@ -189,8 +189,8 @@ class SimpleHeuristic(Heuristic):
 class ProbabilisticHeurstic(Heuristic):
     def __init__(self, player):
         super(ProbabilisticHeurstic, self).__init__(player)
-        self.threshold = 0.75
-        self.sudden_death_threshold = 0.90
+        self.threshold = 0.70
+        self.sudden_death_threshold = 0.80
         self.whole_deck = [Card(Colour.white, 1),
                            Card(Colour.white, 1),
                            Card(Colour.white, 1),
@@ -245,10 +245,10 @@ class ProbabilisticHeurstic(Heuristic):
     def best_move(self):
         player_hand = self.player.hand
         oldest = 50
-        for i, card_in_hand in enumerate(player_hand):
-            if card_in_hand.timestamp < oldest:
-                oldest = card_in_hand.timestamp
-                best_move = Move(self.player.discard, i)
+        # for i, card_in_hand in enumerate(player_hand):
+        #     if card_in_hand.timestamp < oldest:
+        #          oldest = card_in_hand.timestamp
+        #          best_move = Move(self.player.discard, i)
 
         playable_cards = self.player.game.play_area.playable_cards()
         if self.player.game.time > 0:
@@ -286,11 +286,18 @@ class ProbabilisticHeurstic(Heuristic):
         else:
             threshold = self.sudden_death_threshold
         best_prob = 0
+        worst_prob = 1
+        threshold_met = False
         for i, card_in_hand in enumerate(self.player.hand):
             prob = self.calc_percentages(card_in_hand, self.player.hand, self.player.partner.hand,
                                          self.player.game.play_area, self.player.game.discard_pile)
-            if prob > threshold and prob > best_prob:
+            if prob >= threshold and prob > best_prob:
+                threshold_met = True
+                best_prob = prob
                 best_move = Move(self.player.play, i)
+            elif not threshold_met and prob < worst_prob and self.player.game.time == 0:
+                 worst_prob = prob
+                 best_move = Move(self.player.discard, i)
 
         return best_move
 
@@ -318,11 +325,6 @@ class ProbabilisticHeurstic(Heuristic):
                 playable_probability += 1 / n
 
         return playable_probability
-
-
-
-
-
 
 
 class Move:
