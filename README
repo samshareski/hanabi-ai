@@ -1,0 +1,6 @@
+The A.I can be run simply by executing the python script. 
+python3.4 hanabi.py
+
+The execution will run 100 games and print the result. 
+The paramaters to the A.I can be adjusted via the input paramaters to the MoveSearch constructor.
+
